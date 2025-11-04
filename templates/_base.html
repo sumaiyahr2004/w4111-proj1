@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>EHR</title></head>
+  <body>
+    <nav>
+      <a href="{{ url_for('patients') }}">Patients</a> |
+      <a href="{{ url_for('providers') }}">Providers</a> |
+      <a href="{{ url_for('diagnoses') }}">Diagnoses</a> |
+      <a href="{{ url_for('medications') }}">Medications</a> |
+      <a href="{{ url_for('allergies') }}">Allergies</a> |
+      <a href="{{ url_for('visits') }}">Visits</a> |
+      <a href="{{ url_for('reports') }}">Reports</a>
+    </nav>
+    <hr>
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}
+        <ul>
+        {% for cat,msg in msgs %}
+          <li><strong>{{ cat }}:</strong> {{ msg }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </body>
+</html>
