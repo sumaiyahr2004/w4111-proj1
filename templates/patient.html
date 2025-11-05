@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Patient Directory</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Patient List</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>Birthdate</th>
+                <th>Sex</th>
+                <th>Contact Phone</th>
+                <th>Contact Email</th>
+                <th>Emergency Contact Name</th>
+                <th>Emergency Contact Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in patient %}
+            <tr>
+                <td>{{ p.patient_id }}</td>
+                <td>{{ p.full_name }}</td>
+                <td>{{ p.birthdate }}</td>
+                <td>{{ p.sex }}</td>
+                <td>{{ p.contact_phone }}</td>
+                <td>{{ p.contact_email }}</td>
+                <td>{{ p.emergency_contact_name }}</td>
+                <td>{{ p.emergency_contact_phone }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient</title>
+</head>
+<body>
+    <h1>Patient Records</h1>
+    <p>Welcome to the Patients page!</p>
+</body>
+</html>
+
+

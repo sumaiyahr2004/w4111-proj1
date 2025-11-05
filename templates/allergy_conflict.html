@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Allergy Conflicts</title>
+</head>
+<body>
+    <h1>Allergy Conflicts</h1>
+    <table border="1">
+        <tr>
+            <th>Patient ID</th>
+            <th>Patient Name</th>
+            <th>Allergy Substance</th>
+            <th>Reaction</th>
+            <th>Severity</th>
+            <th>Medication ID</th>
+            <th>Generic Name</th>
+            <th>Brand Name</th>
+            <th>Dosage Form</th>
+            <th>Conflict Type</th>
+            <th>Notes</th>
+        </tr>
+        {% for c in conflicts %}
+        <tr>
+            <td>{{ c.patient_id }}</td>
+            <td>{{ c.patient_name }}</td>
+            <td>{{ c.allergy_substance }}</td>
+            <td>{{ c.reaction }}</td>
+            <td>{{ c.severity }}</td>
+            <td>{{ c.med_id }}</td>
+            <td>{{ c.med_generic_name }}</td>
+            <td>{{ c.med_brand_name }}</td>
+            <td>{{ c.dosage_form }}</td>
+            <td>{{ c.conflict_type }}</td>
+            <td>{{ c.notes }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

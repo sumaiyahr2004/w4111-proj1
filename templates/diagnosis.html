@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagnoses</title>
+</head>
+<body>
+    <h1>Visit Diagnoses</h1>
+    <table border="1">
+        <tr>
+            <th>Visit ID</th>
+            <th>Diagnosis Code</th>
+            <th>Diagnosis Name</th>
+        </tr>
+        {% for diag in diagnoses %}
+        <tr>
+            <td>{{ diag.visit_id }}</td>
+            <td>{{ diag.dx_code }}</td>
+            <td>{{ diag.dx_name }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
+

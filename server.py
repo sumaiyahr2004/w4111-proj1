@@ -1,4 +1,3 @@
-
 """
 Columbia's COMS W4111.001 Introduction to Databases
 Example Webserver
@@ -195,9 +194,234 @@ def login():
 	# This code is never executed because of abort().
 	this_is_never_executed()
 
+@app.route('/patient')
+def patient():
+    try:
+        cursor = g.conn.execute(text("SELECT patient_id, Firstname, Lastname, birthdate, sex, contact_phone, contact_email, emergency_contact_name, emergency_contact_phone  FROM patient"))
+        patient_list = []
+        for row in cursor:
+            patient_list.append({
+                "patient_id": row[0],
+                "full_name": f"{row[1]} {row[2]}",
+                "birthdate": row[3],
+                "sex": row[4], 
+		"contact_phone": row[5], 
+		"contact_email": row[6],
+		"emergency_contact_name": row[7], 
+		"emergency_contact_phone": row[8]
+            })
+        cursor.close()
+        context = dict(patient=patient_list)
+        return render_template("patient.html", **context)
+    except Exception as e:
+        print("Error loading patients:", e)
+        return "Error loading patients."
+
+@app.route('/provider')
+def provider():
+    try:
+        cursor = g.conn.execute(text(
+            "SELECT provider_id, full_name, specialty  FROM provider"
+        ))
+        provider_list = []
+        for row in cursor:
+            provider_list.append({
+                "provider_id": row[0],
+                "full_name": row[1],
+                "specialty": row[2]
+            })
+        cursor.close()
+        context = dict(provider=provider_list)
+        return render_template("provider.html", **context)
+    except Exception as e:
+        print("Error loading providers:", e)
+        return "Error loading providers."
+
+@app.route('/visit')
+def visit():
+    try:
+        cursor = g.conn.execute(text(
+            "SELECT visit_id, patient_id, provider_id, visit_date_time, location, visit_type, reason, status FROM visit"
+        ))
+        visit_list = []
+        for row in cursor:
+            visit_list.append({
+                "visit_id": row[0],
+                "patient_id": row[1],
+                "provider_id": row[2],
+                "visit_date_time": row[3],
+                "location": row[4],
+                "visit_type": row[5],
+		"reason": row[6],
+		"status": row[7]
+            })
+        cursor.close()
+        context = dict(visit=visit_list)
+        return render_template("visit.html", **context)
+    except Exception as e:
+        print("Error loading visits:", e)
+        return "Error loading visits."
+
+@app.route('/patient_allergy')
+def patient_allergy():
+    try:
+        cursor = g.conn.execute(text("""
+            SELECT p.patient_id, p.firstname || ' ' || p.lastname AS full_name,
+                   pa.substance, pa.reaction, pa.severity
+            FROM patient p
+            JOIN patient_allergy pa ON p.patient_id = pa.patient_id;
+        """))
+        allergy_list = []
+        for row in cursor:
+            allergy_list.append({
+                "patient_id": row[0],
+                "patient_name": row[1],
+                "substance": row[2],
+                "reaction": row[3],
+                "severity": row[4]
+            })
+        cursor.close()
+        context = dict(allergies=allergy_list)
+        return render_template("patient_allergy.html", **context)
+    except Exception as e:
+        print("Error loading patient allergies:", e)
+
+@app.route('/diagnosis')
+def diagnosis():
+    try:
+        cursor = g.conn.execute(text("""
+            SELECT v.visit_id, d.dx_code, d.dx_name
+            FROM visit v
+            JOIN visit_diagnosis vd ON v.visit_id = vd.visit_id
+            JOIN diagnosis d ON vd.dx_code = d.dx_code;
+        """))
+        diagnosis_list = []
+        for row in cursor:
+            diagnosis_list.append({
+                "visit_id": row[0],
+                "dx_code": row[1],
+                "dx_name": row[2]
+            })
+        cursor.close()
+        context = dict(diagnoses=diagnosis_list)
+        return render_template("diagnosis.html", **context)
+    except Exception as e:
+        print("Error loading diagnoses:", e)
+        return "Error loading diagnoses."
+
+@app.route('/prescription')
+def prescription():
+    try:
+        cursor = g.conn.execute(text("""
+            SELECT p.rx_id, p.provider_id, pr.full_name AS provider_name, 
+                   p.visit_id, v.patient_id, pt.firstname || ' ' || pt.lastname AS patient_name,
+                   p.dose, p.route, p.frequency, p.quantity, p.start_date, p.end_date
+            FROM prescription p
+            JOIN provider pr ON p.provider_id = pr.provider_id
+            JOIN visit v ON p.visit_id = v.visit_id
+            JOIN patient pt ON v.patient_id = pt.patient_id;
+        """))
+        prescription_list = []
+        for row in cursor:
+            prescription_list.append({
+                "rx_id": row[0],
+                "provider_id": row[1],
+                "provider_name": row[2],
+                "visit_id": row[3],
+                "patient_id": row[4],
+                "patient_name": row[5],
+                "dose": row[6],
+                "route": row[7],
+                "frequency": row[8],
+                "quantity": row[9],
+                "start_date": row[10],
+                "end_date": row[11]
+            })
+        cursor.close()
+        context = dict(prescriptions=prescription_list)
+        return render_template("prescription.html", **context)
+    except Exception as e:
+        print("Error loading prescriptions:", e)
+        return "Error loading prescriptions."
+
+@app.route('/medication')
+def medication():
+    try:
+        cursor = g.conn.execute(text("""
+            SELECT m.med_id, m.drug_name, m.brand_name, m.dosage_form,
+                   p.rx_id, pt.firstname || ' ' || pt.lastname AS patient_name, pr.full_name AS provider_name
+            FROM medication m
+            JOIN prescription_medication pm ON m.med_id = pm.med_id
+            JOIN prescription p ON pm.rx_id = p.rx_id
+            JOIN visit v ON p.visit_id = v.visit_id
+            JOIN patient pt ON v.patient_id = pt.patient_id
+            JOIN provider pr ON p.provider_id = pr.provider_id;
+        """))
+        med_list = []
+        for row in cursor:
+            med_list.append({
+                "med_id": row[0],
+                "drug_name": row[1],
+                "brand_name": row[2],
+                "dosage_form": row[3],
+                "rx_id": row[4],
+                "patient_name": row[5],
+                "provider_name": row[6]
+            })
+        cursor.close()
+        context = dict(medications=med_list)
+        return render_template("medication.html", **context)
+    except Exception as e:
+        print("Error loading medications:", e)
+        return "Error loading medications" + str(e)
+
+@app.route('/allergy_conflict')
+def allergy_conflict():
+    try:
+        cursor = g.conn.execute(text("""
+            SELECT pt.patient_id,
+                   pt.firstname || ' ' || pt.lastname AS patient_name,
+                   pa.substance,
+                   pa.reaction,
+                   pa.severity,
+                   m.med_id,
+                   m.drug_name AS med_generic_name,
+                   m.brand_name AS med_brand_name,
+                   m.dosage_form,
+                   ac.med_id AS conflict_med_id
+            FROM patient pt
+            JOIN patient_allergy pa ON pt.patient_id = pa.patient_id
+            JOIN allergyconflict ac ON pa.allergy_id = ac.allergy_id
+            JOIN medication m ON ac.med_id = m.med_id;
+        """))
+
+        conflict_list = []
+        for row in cursor:
+            conflict_list.append({
+                "patient_id": row[0],
+                "patient_name": row[1],
+                "allergy_substance": row[2],
+                "reaction": row[3],
+                "severity": row[4],
+                "med_id": row[5],
+                "med_generic_name": row[6],
+                "med_brand_name": row[7],
+                "dosage_form": row[8],
+                "conflict_med_id": row[9]
+            })
+
+        cursor.close()
+        context = dict(conflicts=conflict_list)
+        return render_template("allergy_conflict.html", **context)
+
+    except Exception as e:
+        print("Error loading allergy conflicts:", e)
+        return "Error loading allergy conflicts."
+
 
 if __name__ == "__main__":
 	import click
+
 
 	@click.command()
 	@click.option('--debug', is_flag=True)

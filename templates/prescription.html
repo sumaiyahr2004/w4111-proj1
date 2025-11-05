@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prescriptions</title>
+</head>
+<body>
+    <h1>Prescription List</h1>
+    <table border="1">
+        <tr>
+            <th>Prescription ID</th>
+            <th>Provider Name</th>
+            <th>Patient Name</th>
+            <th>Dose</th>
+            <th>Route</th>
+            <th>Frequency</th>
+            <th>Quantity</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+        </tr>
+        {% for rx in prescriptions %}
+        <tr>
+            <td>{{ rx.rx_id }}</td>
+            <td>{{ rx.provider_name }}</td>
+            <td>{{ rx.patient_name }}</td>
+            <td>{{ rx.dose }}</td>
+            <td>{{ rx.route }}</td>
+            <td>{{ rx.frequency }}</td>
+            <td>{{ rx.quantity }}</td>
+            <td>{{ rx.start_date }}</td>
+            <td>{{ rx.end_date }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

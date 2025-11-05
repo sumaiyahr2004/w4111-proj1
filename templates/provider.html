@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Providers</title>
+</head>
+<body>
+    <h1>Providers</h1>
+    <table border="1">
+        <tr>
+            <th>Provider ID</th>
+            <th>Full Name</th>
+            <th>Specialty</th>
+        </tr>
+        {% for p in provider %}
+        <tr>
+            <td>{{ p.provider_id }}</td>
+            <td>{{ p.full_name }}</td>
+            <td>{{ p.specialty }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

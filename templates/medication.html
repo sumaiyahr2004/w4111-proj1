@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Medications</title>
+</head>
+<body>
+    <h1>Medication List</h1>
+    <table border="1">
+        <tr>
+            <th>Medication ID</th>
+            <th>Generic/Drug Name</th>
+            <th>Brand Name</th>
+            <th>Dosage Form</th>
+            <th>Prescription ID</th>
+            <th>Patient Name</th>
+            <th>Provider Name</th>
+        </tr>
+        {% for med in medications %}
+        <tr>
+            <td>{{ med.med_id }}</td>
+            <td>{{ med.drug_name }}</td>
+            <td>{{ med.brand_name }}</td>
+            <td>{{ med.dosage_form }}</td>
+            <td>{{ med.rx_id }}</td>
+            <td>{{ med.patient_name }}</td>
+            <td>{{ med.provider_name }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
