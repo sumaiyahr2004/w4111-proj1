@@ -240,7 +240,6 @@ def patient_new():
     if request.method == "GET":
         return render_template("patient_new.html")
 
-    # POST
     fn  = request.form.get("firstname", "").strip()
     ln  = request.form.get("lastname", "").strip()
     bd  = request.form.get("birthdate", "").strip()  # expect YYYY-MM-DD
