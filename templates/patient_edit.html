@@ -1,0 +1,11 @@
+<!doctype html>
+<title>Edit Patient</title>
+<h1>Edit Patient #{{ p.patient_id }}</h1>
+<form method="post" action="{{ url_for('patient_update', patient_id=p.patient_id) }}">
+  <label>First name <input name="firstname" value="{{ p.firstname }}" required></label><br>
+  <label>Last name <input name="lastname" value="{{ p.lastname }}" required></label><br>
+  <label>Phone <input name="contact_phone" value="{{ p.contact_phone }}"></label><br>
+  <label>Email <input name="contact_email" value="{{ p.contact_email }}"></label><br>
+  <button type="submit">Save</button>
+</form>
+<p><a href="{{ url_for('patient') }}">Back</a></p>

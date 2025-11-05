@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>EHR Demo — Navigation</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; }
+    h1 { margin-bottom: 16px; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin: 6px 0; }
+    a { text-decoration: none; color: #0074d9; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>EHR Demo — Navigation</h1>
+
+  <ul>
+    <li><a href="{{ url_for('patient') }}">Patients</a></li>
+    <li><a href="{{ url_for('patient_new') }}">+ New Patient</a></li>
+
+    <li><a href="{{ url_for('provider') }}">Providers</a></li>
+    <li><a href="{{ url_for('visit') }}">Visits</a></li>
+    <li><a href="{{ url_for('diagnosis') }}">Diagnoses</a></li>
+    <li><a href="{{ url_for('medication') }}">Medications</a></li>
+    <li><a href="{{ url_for('prescription') }}">Prescriptions</a></li>
+    <li><a href="{{ url_for('patient_allergy') }}">Allergies</a></li>
+
+    <li><a href="{{ url_for('allergy_conflict') }}">Report: Allergy Conflicts</a></li>
+    <li><a href="{{ url_for('seed_conflicts') }}">Admin: Seed Conflicts</a></li>
+  </ul>
+</body>
+</html>

@@ -12,6 +12,8 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, abort
+from flask import redirect, url_for
+from sqlalchemy import create_engine, text
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -158,7 +160,8 @@ def index():
 	# render_template looks in the templates/ folder for files.
 	# for example, the below file reads template/index.html
 	#
-	return render_template("index.html", **context)
+	return render_template("home.html")
+
 
 #
 # This is an example of a different path.  You can see it at:
@@ -166,8 +169,7 @@ def index():
 #     localhost:8111/another
 #
 # Notice that the function name is another() rather than index()
-# The functions for each app.route need to have different names
-#
+
 @app.route('/another')
 def another():
 	return render_template("another.html")
@@ -197,25 +199,150 @@ def login():
 @app.route('/patient')
 def patient():
     try:
-        cursor = g.conn.execute(text("SELECT patient_id, Firstname, Lastname, birthdate, sex, contact_phone, contact_email, emergency_contact_name, emergency_contact_phone  FROM patient"))
+        cursor = g.conn.execute(text("""
+            SELECT
+                patient_id,
+                firstname,
+                lastname,
+                birthdate,
+                sex,
+                contact_phone,
+                contact_email,
+                emergency_contact_name,
+                emergency_contact_phone
+            FROM patient
+            ORDER BY patient_id
+        """))
+
         patient_list = []
         for row in cursor:
             patient_list.append({
                 "patient_id": row[0],
                 "full_name": f"{row[1]} {row[2]}",
                 "birthdate": row[3],
-                "sex": row[4], 
-		"contact_phone": row[5], 
-		"contact_email": row[6],
-		"emergency_contact_name": row[7], 
-		"emergency_contact_phone": row[8]
+                "sex": row[4],
+                "contact_phone": row[5],
+                "contact_email": row[6],
+                "emergency_contact_name": row[7],
+                "emergency_contact_phone": row[8],
             })
         cursor.close()
-        context = dict(patient=patient_list)
-        return render_template("patient.html", **context)
+
+        return render_template("patient.html", patient=patient_list)
+
     except Exception as e:
         print("Error loading patients:", e)
         return "Error loading patients."
+
+
+@app.route("/patient/new", methods=["GET", "POST"])
+def patient_new():
+    if request.method == "GET":
+        return render_template("patient_new.html")
+
+    # POST
+    fn  = request.form.get("firstname", "").strip()
+    ln  = request.form.get("lastname", "").strip()
+    bd  = request.form.get("birthdate", "").strip()  # expect YYYY-MM-DD
+    sex = request.form.get("sex", "").strip()
+    ph  = request.form.get("phone", "").strip()
+    em  = request.form.get("email", "").strip()
+    ecn = request.form.get("emergency_contact_name", "").strip()
+    ecp = request.form.get("emergency_contact_phone", "").strip()
+
+    # quick validation for required fields
+    missing = [k for k,v in {
+        "firstname": fn, "lastname": ln, "birthdate": bd, "sex": sex,
+        "phone": ph, "email": em, "emergency_contact_name": ecn, "emergency_contact_phone": ecp
+    }.items() if not v]
+    if missing:
+        return f"Missing required fields: {', '.join(missing)}", 400
+
+    try:
+        # Use to_date so 'YYYY-MM-DD' is enforced and safe
+        g.conn.execute(
+            text("""
+                INSERT INTO patient
+                    (firstname, lastname, birthdate, sex,
+                     contact_phone, contact_email,
+                     emergency_contact_name, emergency_contact_phone)
+                VALUES
+                    (:fn, :ln, to_date(:bd,'YYYY-MM-DD'), :sex,
+                     :ph, :em, :ecn, :ecp)
+            """),
+            {"fn": fn, "ln": ln, "bd": bd, "sex": sex,
+             "ph": ph, "em": em, "ecn": ecn, "ecp": ecp}
+        )
+        g.conn.commit()
+        return redirect(url_for("patient"))
+    except Exception as e:
+        print("Insert failed:", e)
+        return f"Insert failed: {e}", 400
+@app.route('/patient/create', methods=['POST'])
+def patient_create():
+    sql = text("""
+        INSERT INTO patient (firstname, lastname, birthdate, sex, contact_phone, contact_email)
+        VALUES (:fn, :ln, :bd, :sex, :ph, :em)
+        RETURNING patient_id
+    """)
+    vals = {
+        "fn": request.form['firstname'],
+        "ln": request.form['lastname'],
+        "bd": request.form['birthdate'],
+        "sex": request.form.get('sex'),
+        "ph": request.form.get('contact_phone'),
+        "em": request.form.get('contact_email'),
+    }
+    try:
+        row = g.conn.execute(sql, vals).fetchone()
+        g.conn.commit()
+        return redirect(url_for('patient'))
+    except Exception as e:
+        g.conn.rollback()
+        return f"Insert failed: {e}", 400
+
+
+@app.route('/patient/<int:patient_id>/edit')
+def patient_edit(patient_id):
+    row = g.conn.execute(text("""
+        SELECT patient_id, firstname, lastname, birthdate, sex, contact_phone, contact_email
+        FROM patient WHERE patient_id = :pid
+    """), {"pid": patient_id}).fetchone()
+    if not row: abort(404)
+    return render_template('patient_edit.html', p=row)
+
+
+@app.route('/patient/<int:patient_id>/update', methods=['POST'])
+def patient_update(patient_id):
+    sql = text("""
+        UPDATE patient SET firstname=:fn, lastname=:ln, contact_phone=:ph, contact_email=:em
+        WHERE patient_id=:pid
+    """)
+    try:
+        g.conn.execute(sql, {
+            "fn": request.form['firstname'],
+            "ln": request.form['lastname'],
+            "ph": request.form.get('contact_phone'),
+            "em": request.form.get('contact_email'),
+            "pid": patient_id
+        })
+        g.conn.commit()
+        return redirect(url_for('patient'))
+    except Exception as e:
+        g.conn.rollback()
+        return f"Update failed: {e}", 400
+
+@app.route('/patient/<int:patient_id>/delete', methods=['POST'])
+def patient_delete(patient_id):
+    try:
+        g.conn.execute(text("DELETE FROM patient WHERE patient_id=:pid"), {"pid": patient_id})
+        g.conn.commit()
+        return redirect(url_for('patient'))
+    except Exception as e:
+        g.conn.rollback()
+        return f"Delete failed: {e}", 400
+
+
 
 @app.route('/provider')
 def provider():
@@ -417,6 +544,96 @@ def allergy_conflict():
     except Exception as e:
         print("Error loading allergy conflicts:", e)
         return "Error loading allergy conflicts."
+
+@app.route("/admin/seed_conflicts")
+def seed_conflicts():
+    pairs = [
+        ("Penicillin", "Amoxicillin"),
+        ("Penicillin", "Penicillin V"),
+        ("NSAIDs", "Ibuprofen"),
+        ("NSAIDs", "Naproxen"),
+        ("Sulfa", "Sulfamethoxazole"),
+        ("Sulfa", "Trimethoprim-Sulfamethoxazole"),
+        ("Aspirin", "Aspirin"),
+        ("Cephalosporins", "Ceftriaxone"),
+        ("Tetracycline", "Doxycycline"),
+        ("Macrolides", "Azithromycin"),
+        ("ACE inhibitors", "Lisinopril"),
+        ("Codeine", "Morphine"),
+    ]
+    inserted = 0
+    with g.conn.begin() as tx:
+        for substance, drug in pairs:
+            rows = g.conn.execute(text("""
+                SELECT pa.allergy_id, m.med_id
+                FROM patient_allergy pa
+                JOIN medication m ON LOWER(m.drug_name) = LOWER(:drug)
+                WHERE LOWER(pa.substance) = LOWER(:sub)
+            """), {"sub": substance, "drug": drug}).fetchall()
+
+            for aid, mid in rows:
+                g.conn.execute(text("""
+                    INSERT INTO allergyconflict(allergy_id, med_id)
+                    VALUES (:aid, :mid)
+                    ON CONFLICT DO NOTHING
+                """), {"aid": aid, "mid": mid})
+                inserted += 1
+    return redirect(url_for('allergy_conflict'))
+
+
+@app.route('/reports/rx_counts')
+def report_rx_counts():
+    min_ct = int(request.args.get('min', 1))
+    rows = g.conn.execute(text("""
+        SELECT pt.patient_id,
+               pt.firstname || ' ' || pt.lastname AS patient_name,
+               COUNT(p.rx_id) AS rx_count
+        FROM patient pt
+        JOIN visit v   ON v.patient_id = pt.patient_id
+        JOIN prescription p ON p.visit_id = v.visit_id
+        GROUP BY pt.patient_id, patient_name
+        HAVING COUNT(p.rx_id) >= :m
+        ORDER BY rx_count DESC, patient_name
+    """), {"m": min_ct}).fetchall()
+    return render_template('report_rx_counts.html', rows=rows, min=min_ct)
+
+
+
+@app.route('/patients')
+def patients_alias():
+    return redirect(url_for('patient'))
+
+
+@app.route('/providers')
+def providers_alias():
+    return redirect(url_for('provider'))
+
+@app.route('/visits')
+def visits_alias():
+    return redirect(url_for('visit'))
+
+@app.route('/diagnoses')
+def diagnoses_alias():
+    return redirect(url_for('diagnosis'))
+
+@app.route('/medications')
+def medications_alias():
+    return redirect(url_for('medication'))
+
+@app.route('/prescriptions')
+def prescriptions_alias():
+    return redirect(url_for('prescription'))
+
+@app.route('/allergies')
+def allergies_alias():
+    return redirect(url_for('patient_allergy'))
+
+@app.route('/reports/conflicts')
+def reports_conflicts_alias():
+    return redirect(url_for('allergy_conflict'))
+
+
+
 
 
 if __name__ == "__main__":

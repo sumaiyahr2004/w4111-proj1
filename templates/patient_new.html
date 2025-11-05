@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head><title>Create Patient</title></head>
+  <body>
+    <h1>Create Patient</h1>
+
+    <form method="post" action="{{ url_for('patient_new') }}">
+      <div>First name <input type="text" name="firstname" required></div>
+      <div>Last name <input type="text" name="lastname" required></div>
+      <div>Birthdate (YYYY-MM-DD) <input type="text" name="birthdate" placeholder="2001-05-14" required></div>
+      <div>Sex
+        <select name="sex" required>
+          <option value="">--select--</option>
+          <option>Female</option>
+          <option>Male</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div>Phone <input type="text" name="phone" required></div>
+      <div>Email <input type="email" name="email" required></div>
+
+      <hr>
+
+      <div>Emergency Contact Name <input type="text" name="emergency_contact_name" required></div>
+      <div>Emergency Contact Phone <input type="text" name="emergency_contact_phone" required></div>
+
+      <p><button type="submit">Create</button></p>
+    </form>
+
+    <p><a href="{{ url_for('patient') }}">Back to patients</a></p>
+  </body>
+</html>

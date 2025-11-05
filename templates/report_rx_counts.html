@@ -1,0 +1,14 @@
+<!doctype html>
+<title>Prescription Counts</title>
+<h1>Prescription Counts (min {{ min }})</h1>
+<form method="get">
+  <label>Min count <input type="number" name="min" value="{{ min }}"></label>
+  <button type="submit">Apply</button>
+</form>
+<table border="1" cellpadding="4">
+  <tr><th>Patient ID</th><th>Patient</th><th># Prescriptions</th></tr>
+  {% for r in rows %}
+    <tr><td>{{ r.patient_id }}</td><td>{{ r.patient_name }}</td><td>{{ r.rx_count }}</td></tr>
+  {% endfor %}
+</table>
+<p><a href="{{ url_for('index') }}">Home</a></p>
