@@ -614,6 +614,36 @@ def report_rx_counts():
     """), {"m": min_ct}).fetchall()
     return render_template('report_rx_counts.html', rows=rows, min=min_ct)
 
+@app.route('/reports', methods=['GET', 'POST'])
+def reports():
+    report_type = request.form.get('report_type')
+    results = None
+
+    if report_type == "diagnosis_no_prescription":
+        # Patients with a diagnosis but no prescription
+        results = g.conn.execute(text("""
+            SELECT DISTINCT p.name AS patient_name, d.name AS diagnosis_name
+            FROM patient p
+            JOIN visit v ON v.patient_id = p.patient_id
+            JOIN visit_diagnosis vd ON vd.visit_id = v.visit_id
+            JOIN diagnosis d ON vd.diagnosis_id = d.diagnosis_id
+            WHERE v.visit_id NOT IN (SELECT visit_id FROM prescription)
+        """)).fetchall()
+
+    elif report_type == "provider_most_medications":
+        # Providers and how often they prescribe each medication
+        results = g.conn.execute(text("""
+            SELECT pr.name AS provider_name, m.name AS medication_name, COUNT(*) AS count
+            FROM prescription px
+            JOIN medication m ON px.medication_id = m.medication_id
+            JOIN provider pr ON px.provider_id = pr.provider_id
+            GROUP BY pr.name, m.name
+            ORDER BY count DESC
+        """)).fetchall()
+
+    return render_template('report.html',
+                           report_type=report_type,
+                           results=results)
 
 
 @app.route('/patients')
