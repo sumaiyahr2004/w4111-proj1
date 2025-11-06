@@ -616,34 +616,39 @@ def report_rx_counts():
 
 @app.route('/reports', methods=['GET', 'POST'])
 def reports():
-    report_type = request.form.get('report_type')
-    results = None
+    report_type = request.form.get('report_type', None)  # which report to show
+    results = []
 
     if report_type == "diagnosis_no_prescription":
         # Patients with a diagnosis but no prescription
         results = g.conn.execute(text("""
-            SELECT DISTINCT p.name AS patient_name, d.name AS diagnosis_name
+            SELECT DISTINCT p.patient_id,
+                   p.firstname || ' ' || p.lastname AS patient_name,
+                   d.dx_name AS diagnosis_name
             FROM patient p
             JOIN visit v ON v.patient_id = p.patient_id
             JOIN visit_diagnosis vd ON vd.visit_id = v.visit_id
-            JOIN diagnosis d ON vd.diagnosis_id = d.diagnosis_id
+            JOIN diagnosis d ON vd.dx_code = d.dx_code
             WHERE v.visit_id NOT IN (SELECT visit_id FROM prescription)
+            ORDER BY patient_name
         """)).fetchall()
 
     elif report_type == "provider_most_medications":
-        # Providers and how often they prescribe each medication
+        # Providers and count of medications prescribed
         results = g.conn.execute(text("""
-            SELECT pr.name AS provider_name, m.name AS medication_name, COUNT(*) AS count
-            FROM prescription px
-            JOIN medication m ON px.medication_id = m.medication_id
-            JOIN provider pr ON px.provider_id = pr.provider_id
-            GROUP BY pr.name, m.name
+            SELECT pr.provider_id,
+                   pr.full_name AS provider_name,
+                   m.drug_name AS medication_name,
+                   COUNT(*) AS count
+            FROM prescription p
+            JOIN provider pr ON p.provider_id = pr.provider_id
+            JOIN prescription_medication pm ON p.rx_id = pm.rx_id
+            JOIN medication m ON pm.med_id = m.med_id
+            GROUP BY pr.provider_id, pr.full_name, m.drug_name
             ORDER BY count DESC
         """)).fetchall()
 
-    return render_template('report.html',
-                           report_type=report_type,
-                           results=results)
+    return render_template('report.html', report_type=report_type, results=results)
 
 
 @app.route('/patients')
