@@ -2,30 +2,50 @@
 <html>
 <head>
     <title>Visits</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
     <h1>Visits</h1>
-    <table border="1">
-        <tr>
-            <th>Visit ID</th>
-            <th>Patient ID</th>
-            <th>Provider ID</th>
-            <th>Date</th>
-	    <th>Location</th>
-            <th>Reason</th>
-            <th>Status</th>
-        </tr>
-        {% for v in visit %}
-        <tr>
-            <td>{{ v.visit_id }}</td>
-            <td>{{ v.patient_id }}</td>
-            <td>{{ v.provider_id }}</td>
-            <td>{{ v.visit_date_time }}</td>
-	    <td>{{ v.location }}</td> 
-            <td>{{ v.reason }}</td>
-            <td>{{ v.status }}</td>
-        </tr>
-        {% endfor %}
+    <table>
+        <thead>
+            <tr>
+                <th>Visit ID</th>
+                <th>Patient ID</th>
+                <th>Provider ID</th>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Diagnoses</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in visit %}
+            <tr>
+                <td>{{ v.visit_id }}</td>
+                <td>{{ v.patient_id }}</td>
+                <td>{{ v.provider_id }}</td>
+                <td>{{ v.visit_date_time }}</td>
+                <td>{{ v.location }}</td>
+                <td>{{ v.visit_reason }}</td>
+		<td>{{ v.visit_status }}</td>
+                <td>{{ v.diagnoses }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
 </body>
 </html>
