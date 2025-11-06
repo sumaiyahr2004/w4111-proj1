@@ -384,24 +384,45 @@ def provider():
 @app.route('/visit')
 def visit():
     try:
-        cursor = g.conn.execute(text(
-            "SELECT visit_id, patient_id, provider_id, visit_date_time, location, visit_type, reason, status FROM visit"
-        ))
+        cursor = g.conn.execute(text("""
+            SELECT v.visit_id,
+                   v.patient_id,
+                   v.provider_id,
+                   v.visit_date_time,
+                   v.location,
+                   v.visit_type,
+                   v.reason,
+                   v.status,
+                   STRING_AGG(DISTINCT d.dx_name, ', ') AS diagnoses,
+                   STRING_AGG(DISTINCT m.medication_name, ', ') AS prescriptions
+            FROM visit v
+            LEFT JOIN visit_diagnosis vd ON v.visit_id = vd.visit_id
+            LEFT JOIN diagnosis d ON vd.dx_code = d.dx_code
+            LEFT JOIN prescription p ON v.visit_id = p.visit_id
+            LEFT JOIN medication m ON p.medication_id = m.medication_id
+            GROUP BY v.visit_id, v.patient_id, v.provider_id, v.visit_date_time,
+                     v.location, v.visit_type, v.reason, v.status
+            ORDER BY v.visit_date_time DESC
+        """))
+
         visit_list = []
         for row in cursor:
             visit_list.append({
-                "visit_id": row[0],
-                "patient_id": row[1],
-                "provider_id": row[2],
-                "visit_date_time": row[3],
-                "location": row[4],
-                "visit_type": row[5],
-		"reason": row[6],
-		"status": row[7]
+                "visit_id": row["visit_id"],
+                "patient_id": row["patient_id"],
+                "provider_id": row["provider_id"],
+                "visit_date_time": row["visit_date_time"],
+                "location": row["location"],
+                "visit_type": row["visit_type"],
+                "reason": row["reason"],
+                "status": row["status"],
+                "diagnoses": row["diagnoses"] or "None",
+                "prescriptions": row["prescriptions"] or "None"
             })
         cursor.close()
-        context = dict(visit=visit_list)
-        return render_template("visit.html", **context)
+
+        return render_template("visit.html", visits=visit_list)
+
     except Exception as e:
         print("Error loading visits:", e)
         return "Error loading visits."
