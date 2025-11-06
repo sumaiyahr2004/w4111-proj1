@@ -199,7 +199,11 @@ def login():
 @app.route('/patient')
 def patient():
     try:
-        cursor = g.conn.execute(text("""
+        # get the search query string, e.g. ?q=ava
+        q = request.args.get("q", "").strip()
+
+        # base query
+        sql = """
             SELECT
                 patient_id,
                 firstname,
@@ -211,9 +215,22 @@ def patient():
                 emergency_contact_name,
                 emergency_contact_phone
             FROM patient
-            ORDER BY patient_id
-        """))
+        """
 
+        # if search is not empty, add WHERE clause
+        params = {}
+        if q:
+            sql += """
+                WHERE LOWER(firstname) LIKE LOWER(:q)
+                   OR LOWER(lastname) LIKE LOWER(:q)
+                   OR LOWER(contact_email) LIKE LOWER(:q)
+                   OR LOWER(contact_phone) LIKE LOWER(:q)
+            """
+            params["q"] = f"%{q}%"
+
+        sql += " ORDER BY patient_id"
+
+        cursor = g.conn.execute(text(sql), params)
         patient_list = []
         for row in cursor:
             patient_list.append({
@@ -228,11 +245,12 @@ def patient():
             })
         cursor.close()
 
+        # pass results to template
         return render_template("patient.html", patient=patient_list)
 
     except Exception as e:
         print("Error loading patients:", e)
-        return "Error loading patients."
+        return f"Error loading patients: {e}"
 
 
 @app.route("/patient/new", methods=["GET", "POST"])
@@ -366,9 +384,25 @@ def provider():
 @app.route('/visit')
 def visit():
     try:
-        cursor = g.conn.execute(text(
-            "SELECT visit_id, patient_id, provider_id, visit_date_time, location, visit_type, reason, status FROM visit"
-        ))
+        cursor = g.conn.execute(text("""
+            SELECT 
+                v.visit_id,
+                v.patient_id,
+                v.provider_id,
+                v.visit_date_time,
+                v.location,
+                v.reason,          
+                v.status,         
+                COALESCE(string_agg(DISTINCT d.dx_name, ', '), 'None') AS diagnoses
+            FROM visit v
+            LEFT JOIN visit_diagnosis vd ON v.visit_id = vd.visit_id
+            LEFT JOIN diagnosis d       ON vd.dx_code  = d.dx_code
+            GROUP BY 
+                v.visit_id, v.patient_id, v.provider_id, 
+                v.visit_date_time, v.location, v.reason, v.status
+            ORDER BY v.visit_id;
+        """))
+
         visit_list = []
         for row in cursor:
             visit_list.append({
@@ -377,15 +411,15 @@ def visit():
                 "provider_id": row[2],
                 "visit_date_time": row[3],
                 "location": row[4],
-                "visit_type": row[5],
-		"reason": row[6],
-		"status": row[7]
+                "visit_reason": row[5],
+                "visit_status": row[6],
+                "diagnoses": row[7],
             })
         cursor.close()
-        context = dict(visit=visit_list)
-        return render_template("visit.html", **context)
+
+        return render_template("visit.html", visit=visit_list)
     except Exception as e:
-        print("Error loading visits:", e)
+        print("Visits page failed with:", e)  # keep this so you see the exact error in the terminal
         return "Error loading visits."
 
 @app.route('/patient_allergy')
@@ -435,6 +469,7 @@ def diagnosis():
         print("Error loading diagnoses:", e)
         return "Error loading diagnoses."
 
+
 @app.route('/prescription')
 def prescription():
     try:
@@ -469,6 +504,7 @@ def prescription():
     except Exception as e:
         print("Error loading prescriptions:", e)
         return "Error loading prescriptions."
+
 
 @app.route('/medication')
 def medication():
@@ -596,6 +632,41 @@ def report_rx_counts():
     """), {"m": min_ct}).fetchall()
     return render_template('report_rx_counts.html', rows=rows, min=min_ct)
 
+@app.route('/reports', methods=['GET', 'POST'])
+def reports():
+    report_type = request.form.get('report_type', None)  # which report to show
+    results = []
+
+    if report_type == "diagnosis_no_prescription":
+        # Patients with a diagnosis but no prescription
+        results = g.conn.execute(text("""
+            SELECT DISTINCT p.patient_id,
+                   p.firstname || ' ' || p.lastname AS patient_name,
+                   d.dx_name AS diagnosis_name
+            FROM patient p
+            JOIN visit v ON v.patient_id = p.patient_id
+            JOIN visit_diagnosis vd ON vd.visit_id = v.visit_id
+            JOIN diagnosis d ON vd.dx_code = d.dx_code
+            WHERE v.visit_id NOT IN (SELECT visit_id FROM prescription)
+            ORDER BY patient_name
+        """)).fetchall()
+
+    elif report_type == "provider_most_medications":
+        # Providers and count of medications prescribed
+        results = g.conn.execute(text("""
+            SELECT pr.provider_id,
+                   pr.full_name AS provider_name,
+                   m.drug_name AS medication_name,
+                   COUNT(*) AS count
+            FROM prescription p
+            JOIN provider pr ON p.provider_id = pr.provider_id
+            JOIN prescription_medication pm ON p.rx_id = pm.rx_id
+            JOIN medication m ON pm.med_id = m.med_id
+            GROUP BY pr.provider_id, pr.full_name, m.drug_name
+            ORDER BY count DESC
+        """)).fetchall()
+
+    return render_template('report.html', report_type=report_type, results=results)
 
 
 @app.route('/patients')
