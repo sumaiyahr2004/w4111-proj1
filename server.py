@@ -9,6 +9,7 @@ Read about it online.
 """
 import os
 # accessible as a variable in index.html:
+from werkzeug.exceptions import HTTPException
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, abort
@@ -17,6 +18,21 @@ from sqlalchemy import create_engine, text
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
+
+def render_error(message, status_code=500):
+    return render_template("error.html", message=message), status_code
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_error("The page or resource you requested was not found.", 404)
+
+@app.errorhandler(400)
+def bad_request(e):
+    return render_error("Your request could not be processed. Please check your input and try again.", 400)
+
+@app.errorhandler(500)
+def internal_error(e):
+    return render_error("An internal error occurred. Please try again later.", 500)
 
 
 #
@@ -250,7 +266,7 @@ def patient():
 
     except Exception as e:
         print("Error loading patients:", e)
-        return f"Error loading patients: {e}"
+        return render_error("We could not load the patient list. Please try again later.", 500)
 
 
 @app.route("/patient/new", methods=["GET", "POST"])
@@ -294,7 +310,9 @@ def patient_new():
         return redirect(url_for("patient"))
     except Exception as e:
         print("Insert failed:", e)
-        return f"Insert failed: {e}", 400
+        return render_error("Could not save the new patient. Please check your input and try again.", 400)
+
+
 @app.route('/patient/create', methods=['POST'])
 def patient_create():
     sql = text("""
